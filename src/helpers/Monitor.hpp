@@ -184,6 +184,9 @@ class CMonitor {
 
     PHLANIMVAR<float> m_cursorZoom;
 
+    // for initial zoom anim
+    PHLANIMVAR<float> m_zoomAnimProgress;
+
     struct {
         bool canTear         = false;
         bool nextRenderTorn  = false;
