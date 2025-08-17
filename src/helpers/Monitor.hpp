@@ -182,6 +182,10 @@ class CMonitor {
     // for special fade/blur
     PHLANIMVAR<float> m_specialFade;
 
+    // for dpms off anim
+    PHLANIMVAR<float> m_dpmsBlackOpacity;
+    bool              m_pendingDpmsAnimation = false;
+
     PHLANIMVAR<float> m_cursorZoom;
 
     // for initial zoom anim
@@ -233,6 +237,7 @@ class CMonitor {
     bool                                attemptDirectScanout();
     void                                setCTM(const Mat3x3& ctm);
     void                                onCursorMovedOnMonitor();
+    void                                setDPMS(bool on);
 
     void                                debugLastPresentation(const std::string& message);
 
@@ -260,6 +265,7 @@ class CMonitor {
   private:
     void                    setupDefaultWS(const SMonitorRule&);
     WORKSPACEID             findAvailableDefaultWS();
+    void                    commitDPMSState(bool state);
 
     bool                    m_doneScheduled = false;
     std::stack<WORKSPACEID> m_prevWorkSpaces;
