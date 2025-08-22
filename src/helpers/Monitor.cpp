@@ -42,6 +42,7 @@ using namespace Hyprutils::String;
 using namespace Hyprutils::Utils;
 using namespace Hyprutils::OS;
 using enum NContentType::eContentType;
+using namespace NColorManagement;
 
 static int ratHandler(void* data) {
     g_pHyprRenderer->renderMonitor(((CMonitor*)data)->m_self.lock());
@@ -1697,6 +1698,18 @@ int CMonitor::maxLuminance(int defaultValue) {
 int CMonitor::maxAvgLuminance(int defaultValue) {
     return m_maxAvgLuminance >= 0 ? m_maxAvgLuminance :
                                     (m_output->parsedEDID.hdrMetadata.has_value() ? m_output->parsedEDID.hdrMetadata->desiredMaxFrameAverageLuminance : defaultValue);
+}
+
+bool CMonitor::wantsWideColor() {
+    return supportsWideColor() && (wantsHDR() || m_imageDescription.primariesNamed == CM_PRIMARIES_BT2020);
+}
+
+bool CMonitor::wantsHDR() {
+    return supportsHDR() && inHDR();
+}
+
+bool CMonitor::inHDR() {
+    return m_output->state->state().hdrMetadata.hdmi_metadata_type1.eotf == 2;
 }
 
 CMonitorState::CMonitorState(CMonitor* owner) : m_owner(owner) {
