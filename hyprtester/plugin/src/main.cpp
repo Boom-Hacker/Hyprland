@@ -9,7 +9,11 @@
 #include <src/layout/IHyprLayout.hpp>
 #include <src/managers/LayoutManager.hpp>
 #include <src/managers/input/InputManager.hpp>
+
+#include <src/managers/PointerManager.hpp>
+#include <src/managers/input/trackpad/TrackpadGestures.hpp>
 #include <src/Compositor.hpp>
+
 #undef private
 
 #include <hyprutils/utils/ScopeGuard.hpp>
@@ -85,9 +89,76 @@ class CTestKeyboard : public IKeyboard {
     }
 
   private:
-    bool m_isVirtual;
+    bool m_isVirtual = false;
 };
 
+<<<<<<< HEAD
+=======
+class CTestMouse : public IPointer {
+  public:
+    static SP<CTestMouse> create(bool isVirtual) {
+        auto maus          = SP<CTestMouse>(new CTestMouse());
+        maus->m_self       = maus;
+        maus->m_isVirtual  = isVirtual;
+        maus->m_deviceName = "test-mouse";
+        maus->m_hlName     = "test-mouse";
+        return maus;
+    }
+
+    virtual bool isVirtual() {
+        return m_isVirtual;
+    }
+
+    virtual SP<Aquamarine::IPointer> aq() {
+        return nullptr;
+    }
+
+    void destroy() {
+        m_events.destroy.emit();
+    }
+
+  private:
+    bool m_isVirtual = false;
+};
+
+SP<CTestMouse>         g_mouse;
+
+static SDispatchResult pressAlt(std::string in) {
+    g_pInputManager->m_lastMods = in == "1" ? HL_MODIFIER_ALT : 0;
+
+    return {.success = true};
+}
+
+static SDispatchResult simulateGesture(std::string in) {
+    CVarList data(in);
+
+    uint32_t fingers = 3;
+    try {
+        fingers = std::stoul(data[1]);
+    } catch (...) { return {.success = false}; }
+
+    if (data[0] == "down") {
+        g_pTrackpadGestures->gestureBegin(IPointer::SSwipeBeginEvent{});
+        g_pTrackpadGestures->gestureUpdate(IPointer::SSwipeUpdateEvent{.fingers = fingers, .delta = {0, 300}});
+        g_pTrackpadGestures->gestureEnd(IPointer::SSwipeEndEvent{});
+    } else if (data[0] == "up") {
+        g_pTrackpadGestures->gestureBegin(IPointer::SSwipeBeginEvent{});
+        g_pTrackpadGestures->gestureUpdate(IPointer::SSwipeUpdateEvent{.fingers = fingers, .delta = {0, -300}});
+        g_pTrackpadGestures->gestureEnd(IPointer::SSwipeEndEvent{});
+    } else if (data[0] == "left") {
+        g_pTrackpadGestures->gestureBegin(IPointer::SSwipeBeginEvent{});
+        g_pTrackpadGestures->gestureUpdate(IPointer::SSwipeUpdateEvent{.fingers = fingers, .delta = {-300, 0}});
+        g_pTrackpadGestures->gestureEnd(IPointer::SSwipeEndEvent{});
+    } else {
+        g_pTrackpadGestures->gestureBegin(IPointer::SSwipeBeginEvent{});
+        g_pTrackpadGestures->gestureUpdate(IPointer::SSwipeUpdateEvent{.fingers = fingers, .delta = {300, 0}});
+        g_pTrackpadGestures->gestureEnd(IPointer::SSwipeEndEvent{});
+    }
+
+    return {.success = true};
+}
+
+>>>>>>> 127aab81 (input: add per-device scroll-factor (#11241))
 static SDispatchResult vkb(std::string in) {
     auto tkb0 = CTestKeyboard::create(false);
     auto tkb1 = CTestKeyboard::create(false);
@@ -135,16 +206,40 @@ static SDispatchResult vkb(std::string in) {
     return {};
 }
 
+static SDispatchResult scroll(std::string in) {
+    int by;
+    try {
+        by = std::stoi(in);
+    } catch (...) { return SDispatchResult{.success = false, .error = "invalid input"}; }
+
+    Debug::log(LOG, "tester: scrolling by {}", by);
+
+    g_mouse->m_pointerEvents.axis.emit(IPointer::SAxisEvent{
+        .delta         = by,
+        .deltaDiscrete = 120,
+        .mouse         = true,
+    });
+
+    return {};
+}
+
 APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     PHANDLE = handle;
 
     HyprlandAPI::addDispatcherV2(PHANDLE, "plugin:test:test", ::test);
     HyprlandAPI::addDispatcherV2(PHANDLE, "plugin:test:snapmove", ::snapMove);
     HyprlandAPI::addDispatcherV2(PHANDLE, "plugin:test:vkb", ::vkb);
+    HyprlandAPI::addDispatcherV2(PHANDLE, "plugin:test:alt", ::pressAlt);
+    HyprlandAPI::addDispatcherV2(PHANDLE, "plugin:test:scroll", ::scroll);
+
+    // init mouse
+    g_mouse = CTestMouse::create(false);
+    g_pInputManager->newMouse(g_mouse);
 
     return {"hyprtestplugin", "hyprtestplugin", "Vaxry", "1.0"};
 }
 
 APICALL EXPORT void PLUGIN_EXIT() {
-    ;
+    g_mouse->destroy();
+    g_mouse.reset();
 }
