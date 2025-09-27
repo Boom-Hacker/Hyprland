@@ -25,4 +25,4 @@ class CUnifiedWorkspaceSwipeGesture {
     friend class CInputManager;
 };
 
-inline UP<CUnifiedWorkspaceSwipeGesture> g_pUnifiedWorkspaceSwipe = makeShared<CUnifiedWorkspaceSwipeGesture>();
+inline SP<CUnifiedWorkspaceSwipeGesture> g_pUnifiedWorkspaceSwipe = makeShared<CUnifiedWorkspaceSwipeGesture>();
