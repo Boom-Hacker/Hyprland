@@ -3233,22 +3233,22 @@ std::optional<std::string> CConfigManager::handleGesture(const std::string& comm
     std::expected<void, std::string> result;
 
     if (data[startDataIdx] == "dispatcher")
-        result = g_pTrackpadGestures->addGesture(makeUnique<CDispatcherTrackpadGesture>(std::string{data[startDataIdx + 1]}, std::string{data[startDataIdx + 2]}), fingerCount,
+        result = g_pTrackpadGestures->addGesture(makeShared<CDispatcherTrackpadGesture>(std::string{data[startDataIdx + 1]}, std::string{data[startDataIdx + 2]}), fingerCount,
                                                  direction, modMask, deltaScale);
     else if (data[startDataIdx] == "workspace")
-        result = g_pTrackpadGestures->addGesture(makeUnique<CWorkspaceSwipeGesture>(), fingerCount, direction, modMask, deltaScale);
+        result = g_pTrackpadGestures->addGesture(makeShared<CWorkspaceSwipeGesture>(), fingerCount, direction, modMask, deltaScale);
     else if (data[startDataIdx] == "resize")
-        result = g_pTrackpadGestures->addGesture(makeUnique<CResizeTrackpadGesture>(), fingerCount, direction, modMask, deltaScale);
+        result = g_pTrackpadGestures->addGesture(makeShared<CResizeTrackpadGesture>(), fingerCount, direction, modMask, deltaScale);
     else if (data[startDataIdx] == "move")
-        result = g_pTrackpadGestures->addGesture(makeUnique<CMoveTrackpadGesture>(), fingerCount, direction, modMask, deltaScale);
+        result = g_pTrackpadGestures->addGesture(makeShared<CMoveTrackpadGesture>(), fingerCount, direction, modMask, deltaScale);
     else if (data[startDataIdx] == "special")
-        result = g_pTrackpadGestures->addGesture(makeUnique<CSpecialWorkspaceGesture>(std::string{data[startDataIdx + 1]}), fingerCount, direction, modMask, deltaScale);
+        result = g_pTrackpadGestures->addGesture(makeShared<CSpecialWorkspaceGesture>(std::string{data[startDataIdx + 1]}), fingerCount, direction, modMask, deltaScale);
     else if (data[startDataIdx] == "close")
-        result = g_pTrackpadGestures->addGesture(makeUnique<CCloseTrackpadGesture>(), fingerCount, direction, modMask, deltaScale);
+        result = g_pTrackpadGestures->addGesture(makeShared<CCloseTrackpadGesture>(), fingerCount, direction, modMask, deltaScale);
     else if (data[startDataIdx] == "float")
-        result = g_pTrackpadGestures->addGesture(makeUnique<CFloatTrackpadGesture>(std::string{data[startDataIdx + 1]}), fingerCount, direction, modMask, deltaScale);
+        result = g_pTrackpadGestures->addGesture(makeShared<CFloatTrackpadGesture>(std::string{data[startDataIdx + 1]}), fingerCount, direction, modMask, deltaScale);
     else if (data[startDataIdx] == "fullscreen")
-        result = g_pTrackpadGestures->addGesture(makeUnique<CFullscreenTrackpadGesture>(std::string{data[startDataIdx + 1]}), fingerCount, direction, modMask, deltaScale);
+        result = g_pTrackpadGestures->addGesture(makeShared<CFullscreenTrackpadGesture>(std::string{data[startDataIdx + 1]}), fingerCount, direction, modMask, deltaScale);
     else if (data[startDataIdx] == "unset")
         result = g_pTrackpadGestures->removeGesture(fingerCount, direction, modMask, deltaScale);
     else
