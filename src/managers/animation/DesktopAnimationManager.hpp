@@ -23,4 +23,4 @@ class CDesktopAnimationManager {
     void animationGnomed(PHLWINDOW w, bool close = false);
 };
 
-inline UP<CDesktopAnimationManager> g_pDesktopAnimationManager = makeShared<CDesktopAnimationManager>();
+inline UP<CDesktopAnimationManager> g_pDesktopAnimationManager = makeUnique<CDesktopAnimationManager>();
