@@ -2522,7 +2522,7 @@ void CHyprRenderer::makeSnapshot(WP<CPopup> popup) {
             renderdata.texture     = s->m_current.texture;
             renderdata.surface     = s;
             renderdata.mainSurface = false;
-            m_renderPass.add(makeUnique<CSurfacePassElement>(renderdata));
+            m_renderPass.add(makeShared<CSurfacePassElement>(renderdata));
             renderdata.surfaceCounter++;
         },
         nullptr);
@@ -2666,7 +2666,7 @@ void CHyprRenderer::renderSnapshot(WP<CPopup> popup) {
         data.ignoreAlpha = std::max(*PBLURIGNOREA, 0.01F); /* ignore the alpha 0 regions */
     ;
 
-    m_renderPass.add(makeUnique<CTexPassElement>(std::move(data)));
+    m_renderPass.add(makeShared<CTexPassElement>(std::move(data)));
 }
 
 bool CHyprRenderer::shouldBlur(PHLLS ls) {
