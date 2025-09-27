@@ -1381,7 +1381,7 @@ void CHyprRenderer::renderMonitor(PHLMONITOR pMonitor, bool commit) {
         CRectPassElement::SRectData data;
         data.box   = {0, 0, pMonitor->m_transformedSize.x, pMonitor->m_transformedSize.y};
         data.color = Colors::BLACK.modifyA(pMonitor->m_dpmsBlackOpacity->value());
-        m_renderPass.add(makeUnique<CRectPassElement>(data));
+        m_renderPass.add(makeShared<CRectPassElement>(data));
     }
 
     EMIT_HOOK_EVENT("render", RENDER_LAST_MOMENT);
