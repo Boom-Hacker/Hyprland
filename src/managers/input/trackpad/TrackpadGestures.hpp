@@ -41,4 +41,4 @@ class CTrackpadGestures {
     bool                          m_gestureFindFailed = false;
 };
 
-inline UP<CTrackpadGestures> g_pTrackpadGestures = makeUnique<CTrackpadGestures>();
+inline SP<CTrackpadGestures> g_pTrackpadGestures = makeShared<CTrackpadGestures>();
