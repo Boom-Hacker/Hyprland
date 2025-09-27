@@ -241,8 +241,6 @@ void CDesktopAnimationManager::startAnimation(PHLWORKSPACE ws, eAnimationType ty
     const auto  PMONITOR      = ws->m_monitor.lock();
     const auto  ANIMSTYLE     = ws->m_alpha->getStyle();
     float       movePerc      = 100.f;
-    // inverted for some reason. TODO: fix the cause
-    bool vert = ANIMSTYLE.starts_with("slidevert") || ANIMSTYLE.starts_with("slidefadevert");
 
     // set floating windows offset callbacks
     ws->m_renderOffset->setUpdateCallback([weak = PHLWORKSPACEREF{ws}](auto) {
@@ -257,28 +255,10 @@ void CDesktopAnimationManager::startAnimation(PHLWORKSPACE ws, eAnimationType ty
         };
     });
 
-    CVarList args(ANIMSTYLE, 0, 's');
-    if (args.size() > 1) {
-        const auto ARG2 = args[1];
-        if (ARG2 == "top") {
-            left = false;
-            vert = true;
-        } else if (ARG2 == "bottom") {
-            left = true;
-            vert = true;
-        } else if (ARG2 == "left") {
-            left = false;
-            vert = false;
-        } else if (ARG2 == "right") {
-            left = true;
-            vert = false;
-        }
-    }
-
-    const auto percstr = args[args.size() - 1];
-    if (percstr.ends_with('%')) {
+    if (ANIMSTYLE.find('%') != std::string::npos) {
         try {
-            movePerc = std::stoi(percstr.substr(0, percstr.length() - 1));
+            auto percstr = ANIMSTYLE.substr(ANIMSTYLE.find_last_of(' ') + 1);
+            movePerc     = std::stoi(percstr.substr(0, percstr.length() - 1));
         } catch (std::exception& e) { Debug::log(ERR, "Error in startAnim: invalid percentage"); }
     }
 
@@ -287,7 +267,7 @@ void CDesktopAnimationManager::startAnimation(PHLWORKSPACE ws, eAnimationType ty
         ws->m_alpha->setValueAndWarp(1.f);
         ws->m_renderOffset->setValueAndWarp(Vector2D(0, 0));
 
-        if (vert) {
+        if (ANIMSTYLE.starts_with("slidefadevert")) {
             if (IN) {
                 ws->m_alpha->setValueAndWarp(0.f);
                 ws->m_renderOffset->setValueAndWarp(Vector2D(0.0, (left ? PMONITOR->m_size.y : -PMONITOR->m_size.y) * (movePerc / 100.f)));
@@ -320,7 +300,7 @@ void CDesktopAnimationManager::startAnimation(PHLWORKSPACE ws, eAnimationType ty
             ws->m_alpha->setValueAndWarp(1.f);
             *ws->m_alpha = 0.f;
         }
-    } else if (vert) {
+    } else if (ANIMSTYLE.starts_with("slidevert")) {
         const auto YDISTANCE = (PMONITOR->m_size.y + *PWORKSPACEGAP) * (movePerc / 100.f);
         ws->m_alpha->setValueAndWarp(1.f); // fix a bug, if switching from fade -> slide.
 

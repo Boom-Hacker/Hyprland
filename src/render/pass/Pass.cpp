@@ -18,8 +18,8 @@ bool CRenderPass::single() const {
     return m_passElements.size() == 1;
 }
 
-void CRenderPass::add(UP<IPassElement>&& el) {
-    m_passElements.emplace_back(makeUnique<SPassElementData>(CRegion{}, std::move(el)));
+void CRenderPass::add(SP<IPassElement> el) {
+    m_passElements.emplace_back(makeShared<SPassElementData>(CRegion{}, el));
 }
 
 void CRenderPass::simplify() {
@@ -294,10 +294,7 @@ float CRenderPass::oneBlurRadius() {
     // TODO: is this exact range correct?
     static auto PBLURSIZE   = CConfigValue<Hyprlang::INT>("decoration:blur:size");
     static auto PBLURPASSES = CConfigValue<Hyprlang::INT>("decoration:blur:passes");
-
-    const auto  BLUR_PASSES = std::clamp(*PBLURPASSES, sc<int64_t>(1), sc<int64_t>(8));
-
-    return std::clamp(*PBLURSIZE, sc<int64_t>(1), sc<int64_t>(40)) * pow(2, BLUR_PASSES); // is this 2^pass? I don't know but it works... I think.
+    return *PBLURPASSES > 10 ? pow(2, 15) : std::clamp(*PBLURSIZE, sc<int64_t>(1), sc<int64_t>(40)) * pow(2, *PBLURPASSES); // is this 2^pass? I don't know but it works... I think.
 }
 
 void CRenderPass::removeAllOfType(const std::string& type) {

@@ -111,14 +111,13 @@ static std::string availableModesForOutput(PHLMONITOR pMonitor, eHyprCtlOutputFo
 }
 
 const std::array<const char*, CMonitor::SC_CHECKS_COUNT> SOLITARY_REASONS_JSON = {
-    "\"UNKNOWN\"",   "\"NOTIFICATION\"", "\"LOCK\"",      "\"WORKSPACE\"", "\"WINDOWED\"", "\"DND\"",        "\"SPECIAL\"",  "\"ALPHA\"",       "\"OFFSET\"",
-    "\"CANDIDATE\"", "\"OPAQUE\"",       "\"TRANSFORM\"", "\"OVERLAYS\"",  "\"FLOAT\"",    "\"WORKSPACES\"", "\"SURFACES\"", "\"CONFIGERROR\"",
+    "\"UNKNOWN\"", "\"NOTIFICATION\"", "\"LOCK\"",   "\"WORKSPACE\"", "\"WINDOWED\"", "\"DND\"",   "\"SPECIAL\"",    "\"ALPHA\"",
+    "\"OFFSET\"",  "\"CANDIDATE\"",    "\"OPAQUE\"", "\"TRANSFORM\"", "\"OVERLAYS\"", "\"FLOAT\"", "\"WORKSPACES\"", "\"SURFACES\"",
 };
 
 const std::array<const char*, CMonitor::SC_CHECKS_COUNT> SOLITARY_REASONS_TEXT = {
-    "unknown reason",    "notification",     "session lock",     "invalid workspace", "windowed mode", "dnd active",
-    "special workspace", "alpha channel",    "workspace offset", "missing candidate", "not opaque",    "surface transformations",
-    "other overlays",    "floating windows", "other workspaces", "subsurfaces",       "config error",
+    "unknown reason",   "notification",      "session lock", "invalid workspace",       "windowed mode",  "dnd active",       "special workspace", "alpha channel",
+    "workspace offset", "missing candidate", "not opaque",   "surface transformations", "other overlays", "floating windows", "other workspaces",  "subsurfaces",
 };
 
 std::string CHyprCtl::getSolitaryBlockedReason(Hyprutils::Memory::CSharedPointer<CMonitor> m, eHyprCtlOutputFormat format) {
@@ -129,7 +128,7 @@ std::string CHyprCtl::getSolitaryBlockedReason(Hyprutils::Memory::CSharedPointer
     std::string reasonStr = "";
     const auto  TEXTS     = format == eHyprCtlOutputFormat::FORMAT_JSON ? SOLITARY_REASONS_JSON : SOLITARY_REASONS_TEXT;
 
-    for (uint32_t i = 0; i < CMonitor::SC_CHECKS_COUNT; i++) {
+    for (int i = 0; i < CMonitor::SC_CHECKS_COUNT; i++) {
         if (reasons & (1 << i)) {
             if (reasonStr != "")
                 reasonStr += ",";
@@ -1180,24 +1179,19 @@ std::string systemInfoRequest(eHyprCtlOutputFormat format, std::string request) 
     } else
         result += "\tunknown: not runtime\n";
 
-    if (g_pHyprOpenGL) {
-        result += std::format("\nExplicit sync: {}", g_pHyprOpenGL->m_exts.EGL_ANDROID_native_fence_sync_ext ? "supported" : "missing");
-        result += std::format("\nGL ver: {}", g_pHyprOpenGL->m_eglContextVersion == CHyprOpenGLImpl::EGL_CONTEXT_GLES_3_2 ? "3.2" : "3.0");
-    }
+    result += std::format("\nExplicit sync: {}", g_pHyprOpenGL->m_exts.EGL_ANDROID_native_fence_sync_ext ? "supported" : "missing");
+    result += std::format("\nGL ver: {}", g_pHyprOpenGL->m_eglContextVersion == CHyprOpenGLImpl::EGL_CONTEXT_GLES_3_2 ? "3.2" : "3.0");
+    result += std::format("\nBackend: {}", g_pCompositor->m_aqBackend->hasSession() ? "drm" : "sessionless");
 
-    if (g_pCompositor) {
-        result += std::format("\nBackend: {}", g_pCompositor->m_aqBackend->hasSession() ? "drm" : "sessionless");
+    result += "\n\nMonitor info:";
 
-        result += "\n\nMonitor info:";
-
-        for (const auto& m : g_pCompositor->m_monitors) {
-            result += std::format("\n\tPanel {}: {}x{}, {} {} {} {} -> backend {}\n\t\texplicit {}\n\t\tedid:\n\t\t\thdr {}\n\t\t\tchroma {}\n\t\t\tbt2020 {}\n\t\tvrr capable "
-                                  "{}\n\t\tnon-desktop {}\n\t\t",
-                                  m->m_name, sc<int>(m->m_pixelSize.x), sc<int>(m->m_pixelSize.y), m->m_output->name, m->m_output->make, m->m_output->model, m->m_output->serial,
-                                  backend(m->m_output->getBackend()->type()), check(m->m_output->supportsExplicit), check(m->m_output->parsedEDID.hdrMetadata.has_value()),
-                                  check(m->m_output->parsedEDID.chromaticityCoords.has_value()), check(m->m_output->parsedEDID.supportsBT2020), check(m->m_output->vrrCapable),
-                                  check(m->m_output->nonDesktop));
-        }
+    for (const auto& m : g_pCompositor->m_monitors) {
+        result += std::format("\n\tPanel {}: {}x{}, {} {} {} {} -> backend {}\n\t\texplicit {}\n\t\tedid:\n\t\t\thdr {}\n\t\t\tchroma {}\n\t\t\tbt2020 {}\n\t\tvrr capable "
+                              "{}\n\t\tnon-desktop {}\n\t\t",
+                              m->m_name, sc<int>(m->m_pixelSize.x), sc<int>(m->m_pixelSize.y), m->m_output->name, m->m_output->make, m->m_output->model, m->m_output->serial,
+                              backend(m->m_output->getBackend()->type()), check(m->m_output->supportsExplicit), check(m->m_output->parsedEDID.hdrMetadata.has_value()),
+                              check(m->m_output->parsedEDID.chromaticityCoords.has_value()), check(m->m_output->parsedEDID.supportsBT2020), check(m->m_output->vrrCapable),
+                              check(m->m_output->nonDesktop));
     }
 
     if (g_pHyprCtl && g_pHyprCtl->m_currentRequestParams.sysInfoConfig) {

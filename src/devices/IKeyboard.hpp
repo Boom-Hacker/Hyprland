@@ -79,7 +79,6 @@ class IKeyboard : public IHID {
     void                              updateKeymapFD();
     bool                              getPressed(uint32_t key);
     bool                              shareStates();
-    void                              setShareStatesAuto(bool shareStates);
 
     bool                              m_active     = false;
     bool                              m_enabled    = true;
@@ -114,9 +113,6 @@ class IKeyboard : public IHID {
     std::string                    m_xkbKeymapString = "";
     Hyprutils::OS::CFileDescriptor m_xkbKeymapFD;
 
-    std::string                    m_xkbKeymapV1String = "";
-    Hyprutils::OS::CFileDescriptor m_xkbKeymapV1FD;
-
     SStringRuleNames               m_currentRules;
     int                            m_repeatRate        = 0;
     int                            m_repeatDelay       = 0;
@@ -132,6 +128,5 @@ class IKeyboard : public IHID {
 
   protected:
     bool updatePressed(uint32_t key, bool pressed);
-    bool m_shareStates     = true;
-    bool m_shareStatesAuto = true;
+    bool m_shareStates = true;
 };

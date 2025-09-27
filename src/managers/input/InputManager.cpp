@@ -1108,6 +1108,7 @@ void CInputManager::applyConfigToKeyboard(SP<IKeyboard> pKeyboard) {
     pKeyboard->m_repeatDelay = std::max(0, REPEATDELAY);
     pKeyboard->m_numlockOn   = NUMLOCKON;
     pKeyboard->m_xkbFilePath = FILEPATH;
+
     pKeyboard->setKeymap(IKeyboard::SStringRuleNames{LAYOUT, MODEL, VARIANT, OPTIONS, RULES});
 
     const auto LAYOUTSTR = pKeyboard->getActiveLayout();
@@ -1479,7 +1480,6 @@ void CInputManager::onKeyboardMod(SP<IKeyboard> pKeyboard) {
     auto       MODS    = pKeyboard->m_modifiersState;
     const auto ALLMODS = shareModsFromAllKBs(MODS.depressed);
     MODS.depressed     = ALLMODS;
-    m_lastMods         = MODS.depressed;
 
     const auto IME = m_relay.m_inputMethod.lock();
 
@@ -1489,6 +1489,7 @@ void CInputManager::onKeyboardMod(SP<IKeyboard> pKeyboard) {
     } else {
         g_pSeatManager->setKeyboard(pKeyboard);
         g_pSeatManager->sendKeyboardMods(MODS.depressed, MODS.latched, MODS.locked, MODS.group);
+        m_lastMods = MODS.depressed;
     }
 
     updateKeyboardsLeds(pKeyboard);
@@ -1506,20 +1507,12 @@ void CInputManager::onKeyboardMod(SP<IKeyboard> pKeyboard) {
 }
 
 bool CInputManager::shouldIgnoreVirtualKeyboard(SP<IKeyboard> pKeyboard) {
-    if (!pKeyboard)
-        return true;
-
     if (!pKeyboard->isVirtual())
         return false;
 
-    const auto CLIENT = pKeyboard->getClient();
+    auto client = pKeyboard->getClient();
 
-    const auto DISALLOWACTION = CLIENT && !m_relay.m_inputMethod.expired() && m_relay.m_inputMethod->grabClient() == CLIENT;
-
-    if (DISALLOWACTION)
-        pKeyboard->setShareStatesAuto(false);
-
-    return DISALLOWACTION;
+    return !pKeyboard || (client && !m_relay.m_inputMethod.expired() && m_relay.m_inputMethod->grabClient() == client);
 }
 
 void CInputManager::refocus(std::optional<Vector2D> overridePos) {
@@ -1795,13 +1788,8 @@ void CInputManager::setTabletConfigs() {
             const auto ACTIVE_AREA_SIZE = g_pConfigManager->getDeviceVec(NAME, "active_area_size", "input:tablet:active_area_size");
             const auto ACTIVE_AREA_POS  = g_pConfigManager->getDeviceVec(NAME, "active_area_position", "input:tablet:active_area_position");
             if (ACTIVE_AREA_SIZE.x != 0 || ACTIVE_AREA_SIZE.y != 0) {
-                // Rotations with an odd index (90 and 270 degrees, and their flipped variants) swap the X and Y axes.
-                // Use swapped dimensions when the axes are rotated, otherwise keep the original ones.
-                const Vector2D effectivePhysicalSize = (ROTATION % 2) ? Vector2D{t->aq()->physicalSize.y, t->aq()->physicalSize.x} : t->aq()->physicalSize;
-
-                // Scale the active area coordinates into normalized space (0–1) using the effective dimensions.
-                t->m_activeArea = CBox{ACTIVE_AREA_POS.x / effectivePhysicalSize.x, ACTIVE_AREA_POS.y / effectivePhysicalSize.y,
-                                       (ACTIVE_AREA_POS.x + ACTIVE_AREA_SIZE.x) / effectivePhysicalSize.x, (ACTIVE_AREA_POS.y + ACTIVE_AREA_SIZE.y) / effectivePhysicalSize.y};
+                t->m_activeArea = CBox{ACTIVE_AREA_POS.x / t->aq()->physicalSize.x, ACTIVE_AREA_POS.y / t->aq()->physicalSize.y,
+                                       (ACTIVE_AREA_POS.x + ACTIVE_AREA_SIZE.x) / t->aq()->physicalSize.x, (ACTIVE_AREA_POS.y + ACTIVE_AREA_SIZE.y) / t->aq()->physicalSize.y};
             }
         }
     }

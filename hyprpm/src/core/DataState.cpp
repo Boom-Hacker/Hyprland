@@ -18,9 +18,6 @@ static std::string getTempRoot() {
 
     const auto STR = ENV + std::string{"/hyprpm/"};
 
-    if (!std::filesystem::exists(STR))
-        mkdir(STR.c_str(), S_IRWXU);
-
     return STR;
 }
 

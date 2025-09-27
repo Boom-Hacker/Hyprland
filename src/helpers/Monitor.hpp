@@ -149,6 +149,7 @@ class CMonitor {
     bool                        m_pendingFrame    = false; // if we schedule a frame during rendering, reschedule it after
     bool                        m_renderingActive = false;
 
+    wl_event_source*            m_renderTimer   = nullptr; // for RAT
     bool                        m_ratsScheduled = false;
     CTimer                      m_lastPresentationTimer;
 
@@ -187,9 +188,6 @@ class CMonitor {
     int               m_pendingDpmsAnimationCounter = 0;
 
     PHLANIMVAR<float> m_cursorZoom;
-
-    // for fading in the wallpaper because it doesn't happen instantly (it's loaded async)
-    PHLANIMVAR<float> m_backgroundOpacity;
 
     // for initial zoom anim
     PHLANIMVAR<float> m_zoomAnimProgress;
@@ -238,7 +236,7 @@ class CMonitor {
     };
 
     // keep in sync with HyprCtl
-    enum eSolitaryCheck : uint32_t {
+    enum eSolitaryCheck : uint16_t {
         SC_OK = 0,
 
         SC_UNKNOWN      = (1 << 0),
@@ -257,9 +255,8 @@ class CMonitor {
         SC_FLOAT        = (1 << 13),
         SC_WORKSPACES   = (1 << 14),
         SC_SURFACES     = (1 << 15),
-        SC_ERRORBAR     = (1 << 16),
 
-        SC_CHECKS_COUNT = 17,
+        SC_CHECKS_COUNT = 16,
     };
 
     // keep in sync with HyprCtl
@@ -301,7 +298,7 @@ class CMonitor {
     WORKSPACEID activeSpecialWorkspaceID();
     CBox        logicalBox();
     void        scheduleDone();
-    uint32_t    isSolitaryBlocked(bool full = false);
+    uint16_t    isSolitaryBlocked(bool full = false);
     void        recheckSolitary();
     uint8_t     isTearingBlocked(bool full = false);
     bool        updateTearing();

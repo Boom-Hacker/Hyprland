@@ -16,7 +16,6 @@
 #include "../managers/TokenManager.hpp"
 #include "../managers/animation/AnimationManager.hpp"
 #include "../managers/ANRManager.hpp"
-#include "../managers/eventLoop/EventLoopManager.hpp"
 #include "../protocols/XDGShell.hpp"
 #include "../protocols/core/Compositor.hpp"
 #include "../protocols/core/Subcompositor.hpp"
@@ -577,12 +576,7 @@ void CWindow::onMap() {
             if (!m_isMapped || isX11OverrideRedirect())
                 return;
 
-            g_pEventLoopManager->doLater([this, self = m_self] {
-                if (!self)
-                    return;
-
-                sendWindowSize();
-            });
+            sendWindowSize();
         },
         false);
 
@@ -1237,7 +1231,7 @@ void CWindow::updateWindowData(const SWorkspaceRule& workspaceRule) {
 }
 
 int CWindow::getRealBorderSize() {
-    if (m_windowData.noBorder.valueOrDefault() || (m_workspace && isEffectiveInternalFSMode(FSMODE_FULLSCREEN)) || !m_windowData.decorate.valueOrDefault())
+    if (m_windowData.noBorder.valueOrDefault() || (m_workspace && isEffectiveInternalFSMode(FSMODE_FULLSCREEN)))
         return 0;
 
     static auto PBORDERSIZE = CConfigValue<Hyprlang::INT>("general:border_size");
@@ -1555,20 +1549,13 @@ std::string CWindow::fetchClass() {
 }
 
 void CWindow::onAck(uint32_t serial) {
-    const auto SERIAL = std::ranges::find_if(m_pendingSizeAcks | std::views::reverse, [serial](const auto& e) { return e.first <= serial; });
+    const auto SERIAL = std::ranges::find_if(m_pendingSizeAcks | std::views::reverse, [serial](const auto& e) { return e.first == serial; });
 
     if (SERIAL == m_pendingSizeAcks.rend())
         return;
 
     m_pendingSizeAck = *SERIAL;
     std::erase_if(m_pendingSizeAcks, [&](const auto& el) { return el.first <= SERIAL->first; });
-
-    if (m_isX11)
-        return;
-
-    m_wlSurface->resource()->m_pending.ackedSize          = m_pendingSizeAck->second; // apply pending size. We pinged, the window ponged.
-    m_wlSurface->resource()->m_pending.updated.bits.acked = true;
-    m_pendingSizeAck.reset();
 }
 
 void CWindow::onResourceChangeX11() {
@@ -1818,7 +1805,7 @@ void CWindow::sendWindowSize(bool force) {
     if (m_isX11 && m_xwaylandSurface)
         m_xwaylandSurface->configure({REPORTPOS, REPORTSIZE});
     else if (m_xdgSurface && m_xdgSurface->m_toplevel)
-        m_pendingSizeAcks.emplace_back(m_xdgSurface->m_toplevel->setSize(REPORTSIZE), REPORTSIZE.floor());
+        m_pendingSizeAcks.emplace_back(m_xdgSurface->m_toplevel->setSize(REPORTSIZE), REPORTPOS.floor());
 }
 
 NContentType::eContentType CWindow::getContentType() {
@@ -1922,12 +1909,4 @@ SP<CWLSurfaceResource> CWindow::getSolitaryResource() {
     }
 
     return nullptr;
-}
-
-Vector2D CWindow::getReportedSize() {
-    if (m_isX11)
-        return m_reportedSize;
-    if (m_wlSurface && m_wlSurface->resource())
-        return m_wlSurface->resource()->m_current.ackedSize;
-    return m_reportedSize;
 }

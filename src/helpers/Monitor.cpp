@@ -1,7 +1,6 @@
 #include "Monitor.hpp"
 #include "MiscFunctions.hpp"
 #include "../macros.hpp"
-#include "SharedDefs.hpp"
 #include "math/Math.hpp"
 #include "../protocols/ColorManagement.hpp"
 #include "../Compositor.hpp"
@@ -26,7 +25,6 @@
 #include "../managers/animation/AnimationManager.hpp"
 #include "../managers/animation/DesktopAnimationManager.hpp"
 #include "../managers/input/InputManager.hpp"
-#include "../hyprerror/HyprError.hpp"
 #include "sync/SyncTimeline.hpp"
 #include "time/Time.hpp"
 #include "../desktop/LayerSurface.hpp"
@@ -48,6 +46,12 @@ using namespace Hyprutils::OS;
 using enum NContentType::eContentType;
 using namespace NColorManagement;
 
+static int ratHandler(void* data) {
+    g_pHyprRenderer->renderMonitor(((CMonitor*)data)->m_self.lock());
+
+    return 1;
+}
+
 CMonitor::CMonitor(SP<Aquamarine::IOutput> output_) : m_state(this), m_output(output_) {
     g_pAnimationManager->createAnimation(0.f, m_specialFade, g_pConfigManager->getAnimationPropertyConfig("specialWorkspaceIn"), AVARDAMAGE_NONE);
     m_specialFade->setUpdateCallback([this](auto) { g_pHyprRenderer->damageMonitor(m_self.lock()); });
@@ -56,8 +60,6 @@ CMonitor::CMonitor(SP<Aquamarine::IOutput> output_) : m_state(this), m_output(ou
     m_cursorZoom->setUpdateCallback([this](auto) { g_pHyprRenderer->damageMonitor(m_self.lock()); });
     g_pAnimationManager->createAnimation(0.F, m_zoomAnimProgress, g_pConfigManager->getAnimationPropertyConfig("monitorAdded"), AVARDAMAGE_NONE);
     m_zoomAnimProgress->setUpdateCallback([this](auto) { g_pHyprRenderer->damageMonitor(m_self.lock()); });
-    g_pAnimationManager->createAnimation(0.F, m_backgroundOpacity, g_pConfigManager->getAnimationPropertyConfig("monitorAdded"), AVARDAMAGE_NONE);
-    m_backgroundOpacity->setUpdateCallback([this](auto) { g_pHyprRenderer->damageMonitor(m_self.lock()); });
     g_pAnimationManager->createAnimation(0.F, m_dpmsBlackOpacity, g_pConfigManager->getAnimationPropertyConfig("fadeDpms"), AVARDAMAGE_NONE);
     m_dpmsBlackOpacity->setUpdateCallback([this](auto) { g_pHyprRenderer->damageMonitor(m_self.lock()); });
 }
@@ -325,6 +327,8 @@ void CMonitor::onConnect(bool noRule) {
     if (!found)
         g_pCompositor->setActiveMonitor(m_self.lock());
 
+    m_renderTimer = wl_event_loop_add_timer(g_pCompositor->m_wlEventLoop, ratHandler, this);
+
     g_pCompositor->scheduleFrameForMonitor(m_self.lock(), Aquamarine::IOutput::AQ_SCHEDULE_NEW_MONITOR);
 
     PROTO::gamma->applyGammaToState(m_self.lock());
@@ -346,6 +350,11 @@ void CMonitor::onDisconnect(bool destroy) {
         EMIT_HOOK_EVENT("monitorRemoved", m_self.lock());
         g_pCompositor->arrangeMonitors();
     }};
+
+    if (m_renderTimer) {
+        wl_event_source_remove(m_renderTimer);
+        m_renderTimer = nullptr;
+    }
 
     m_frameScheduler.reset();
 
@@ -908,12 +917,11 @@ bool CMonitor::applyMonitorRule(SMonitorRule* pMonitorRule, bool force) {
             } else {
                 if (!autoScale) {
                     Debug::log(ERR, "Invalid scale passed to monitor, {} found suggestion {}", m_scale, searchScale);
-                    static auto PDISABLENOTIFICATION = CConfigValue<Hyprlang::INT>("misc:disable_scale_notification");
-                    if (!*PDISABLENOTIFICATION)
-                        g_pHyprNotificationOverlay->addNotification(std::format("Invalid scale passed to monitor: {}, using suggested scale: {}", m_scale, searchScale),
-                                                                    CHyprColor(1.0, 0.0, 0.0, 1.0), 5000, ICON_WARNING);
-                }
-                m_scale = searchScale;
+                    g_pConfigManager->addParseError(
+                        std::format("Invalid scale passed to monitor {}, failed to find a clean divisor. Suggested nearest scale: {:5f}", m_name, searchScale));
+                    m_scale = getDefaultScale();
+                } else
+                    m_scale = searchScale;
             }
         }
     }
@@ -1504,17 +1512,11 @@ void CMonitor::setCTM(const Mat3x3& ctm_) {
     g_pCompositor->scheduleFrameForMonitor(m_self.lock(), Aquamarine::IOutput::scheduleFrameReason::AQ_SCHEDULE_NEEDS_FRAME);
 }
 
-uint32_t CMonitor::isSolitaryBlocked(bool full) {
-    uint32_t reasons = 0;
+uint16_t CMonitor::isSolitaryBlocked(bool full) {
+    uint16_t reasons = 0;
 
     if (g_pHyprNotificationOverlay->hasAny()) {
         reasons |= SC_NOTIFICATION;
-        if (!full)
-            return reasons;
-    }
-
-    if (g_pHyprError->active() && g_pCompositor->m_lastMonitor == m_self) {
-        reasons |= SC_ERRORBAR;
         if (!full)
             return reasons;
     }
